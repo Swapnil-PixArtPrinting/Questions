@@ -18,3 +18,153 @@ The robot performs the instructions in a command sequence in an infinite loop. D
 
 * Convert an Unbounded Command Sequence to Bounded
     * For command sequences that are not bounded, print out (using Console.WriteLine() or equivalent) a modified command sequence that is bounded by appending the minimal amount of additional commands to the original sequence.  This has a very simple answer if the candidate truly understands the problem.
+
+Absolutely! Here's a corrected and **copy-paste friendly Markdown README** for your TypeScript solution. This version:
+
+* Follows clean formatting
+* Includes code highlights, bullet points, and sample output blocks
+* Provides structured explanation of logic, features, usage, and UML
+
+---
+
+````markdown
+# 🤖 Robot Bounded Movement Checker
+
+This TypeScript module simulates a robot on an infinite 2D plane that follows a sequence of commands in an **infinite loop**.
+
+## 🚦 Commands
+
+Each character in the command string represents an action:
+
+- `G`: Go forward one step in the current direction
+- `L`: Turn left 90 degrees
+- `R`: Turn right 90 degrees
+
+---
+
+## 🎯 Goal
+
+Determine if the robot's movement is **bounded** in a circle, i.e., whether it always stays within a finite region when the command sequence is repeated infinitely.
+
+---
+
+## ✅ Bounded Criteria
+
+A command sequence is **bounded** if **either**:
+
+- The robot returns to the origin `(0, 0)` after executing the sequence once
+- The robot **does not face North** at the end of the sequence
+
+> If either condition is true, the robot is guaranteed to remain within a bounded circle when repeating the command sequence forever.
+
+---
+
+## 💡 Features
+
+- ✅ Implements the **Command Pattern** using `ICommand` and command classes (`MoveForward`, `TurnLeft`, `TurnRight`)
+- ✅ Tracks a **bounding box** using `PositionTracer`
+- ✅ Detects **bounded** vs **unbounded** command sequences
+- ✅ Suggests a minimal change to fix unbounded sequences (by appending `'L'`)
+
+---
+
+## 🧪 Example Output
+
+Running the following input:
+
+```ts
+doesCircleExist(["GLGLGLG", "GRGRGRG", "GG", "GGLLGG"]);
+````
+
+Produces:
+
+```
+✅ Bounding box for 'GLGLGLG': MinX = -1, MinY = 0, MaxX = 0, MaxY = 1
+✅ Bounding box for 'GRGRGRG': MinX = 0, MinY = -1, MaxX = 1, MaxY = 0
+❌ Unbounded. Suggest appending 'L' → 'GGL'
+✅ Bounding box for 'GGLLGG': MinX = -2, MinY = 0, MaxX = 0, MaxY = 0
+[ 'YES', 'YES', 'NO', 'YES' ]
+```
+
+---
+
+## 🧱 Architecture Overview (Text-Based UML)
+
+```
++----------------------+
+|      Position        |
++----------------------+
+| + x: number          |
+| + y: number          |
+| + direction: Direction|
++----------------------+
+
++----------------------+
+|     ICommand         | <<interface>>
++----------------------+
+| + execute(pos): Position |
++----------------------+
+
+        ▲         ▲         ▲
+        |         |         |
++----------------+  +------------------+  +-------------------+
+| MoveForwardCmd |  | TurnLeftCommand  |  | TurnRightCommand  |
++----------------+  +------------------+  +-------------------+
+
++------------------------+
+|     PositionTracer     |
++------------------------+
+| + minX, minY, maxX, maxY|
+| + trace(position)       |
++------------------------+
+
++----------------------------+
+| doesCircleExist(commands)  |
+| doesSingleCircleExist(seq) |
+| getCommandFromLetter(char) |
++----------------------------+
+```
+
+---
+
+## 📦 How to Use
+
+1. Copy the TypeScript implementation into your project
+2. Call `doesCircleExist(["commands", ...])`
+3. Observe console output for bounding info or suggestions
+4. Use return values programmatically as `"YES"` or `"NO"`
+
+---
+
+## 🔧 Optional Enhancements
+
+* Add CLI input and output
+* Visualize robot path on a grid
+* Generate actual bounding circle (radius and center)
+* Animate path using canvas/SVG
+
+---
+
+## 📜 License
+
+MIT – free to use, modify, and share.
+
+---
+
+## 👨‍💻 Author
+
+Generated and optimized by \[ChatGPT + User Collaboration]
+
+```
+
+---
+
+Let me know if you'd like the above delivered in:
+
+- PDF format
+- Rendered GitHub-style preview
+- VSCode snippet format
+- Or split into a README.md and .ts file set
+
+You're all set for interviews or GitHub!
+```

@@ -70,3 +70,124 @@ There are three kinds of coupons:
 
 * Sorting the list
     * Another good follow-up question is "If allowed to sort the list to get the best price, how would you implement this?". Implementing an exact solution for this problem is pretty tricky, so don't expect even a strong candidate to complete it within the hour's time. 
+
+
+# 🛒 Shopping Cart Price Calculator (with Coupons)
+
+This TypeScript solution simulates a shopping cart with support for coupons that affect pricing. Coupons must be applied **in sequence**, and they can be of different types.
+
+---
+
+### UML
+
++----------------------+
+|      ICartItem       |  <<interface>>
++----------------------+
+| + id: string         |
++----------------------+
+
+            ▲
+            |
++----------------------+        +---------------------------+
+|       Product        |        |         ICoupon           |  <<interface>>
++----------------------+        +---------------------------+
+| + id: string         |        | + id: string              |
+| + productId: string  |        | + apply(cart, index): void|
+| + currentCost: number|        +---------------------------+
+| + originalCost: number|
++----------------------+
+| + applyDiscount(percent)      ▲
+| + applyFlatDiscount(amount)   |
++----------------------+
+                                  |
+          +-----------------------+------------------------------+
+          |                       |                              |
++------------------------+ +------------------------+ +-------------------------------+
+| PercentOffAllCoupon    | | PercentOffNextCoupon   | | DollarOffNthProductCoupon     |
++------------------------+ +------------------------+ +-------------------------------+
+| + id: string           | | + id: string           | | + id: string                  |
+| + percentageOff: number| | + percentageOff: number| | + amount: number              |
+| + apply(...)           | | + apply(...)           | | + targetCount: number         |
+|                        | |                        | | + productId: string           |
++------------------------+ +------------------------+ | + apply(...)                  |
+                                                      +-------------------------------+
+
++----------------------+
+|        Cart          |
++----------------------+
+| - items: ICartItem[] |
++----------------------+
+| + totalPrice(): number |
++----------------------+
+           |
+           v
+   Uses a list of ICartItem
+   Applies coupons in sequence
+
+
+---
+
+## 💡 Problem
+
+Given a list of products and coupons interleaved in a cart (processed in order), compute the final price.
+
+---
+
+## 🎟️ Coupon Types
+
+1. **PercentOffAllCoupon**
+   - Applies a discount to **every product** in the cart.
+   - E.g. "5% off all items"
+
+2. **PercentOffNextCoupon**
+   - Applies a discount to the **next product** after the coupon.
+   - E.g. "10% off your next item"
+
+3. **DollarOffNthProductCoupon**
+   - Applies a **fixed amount discount** to the Nth product of a specific type.
+   - E.g. "$5 off your 3rd postcard sorter"
+
+---
+
+## ✅ Rules
+
+- Coupons are applied **in order**, as they appear in the cart.
+- A product can be affected by **multiple coupons**.
+- A coupon may or may not be effective depending on cart state.
+
+---
+
+## 🧱 Architecture
+
+### Classes
+
+- `Product`: Represents a buyable item.
+- `ICoupon`: Interface for all coupon types.
+- `Cart`: Holds cart items and calculates total price.
+- `PercentOffAllCoupon`, `PercentOffNextCoupon`, `DollarOffNthProductCoupon`: Implement the `ICoupon` interface.
+
+### Design Principles
+
+- **Open-Closed Principle**: Add new coupon types by implementing `ICoupon`—no change to existing logic.
+- **Single Responsibility**: Each class does one job (product logic, coupon logic, total logic).
+- **Extensibility**: Easily supports future coupon types and logic.
+
+---
+
+## 🧪 Test Output
+
+Cart 1: Total = $29.00
+Cart 2: Total = $28.00
+Cart 3: Total = $12.90
+Complex Cart: Total = $60.22
+
+
+---
+
+## 📦 Future Enhancements
+
+- Add coupon **expiration rules** or **minimum cart amount conditions**.
+- Add support for **sorting items** to get lowest total.
+- Use a **factory** pattern for creating coupons from strings/configs.
+- Implement immutable cart operations for safe preview/undo.
+

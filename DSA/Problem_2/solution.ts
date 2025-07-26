@@ -19,45 +19,28 @@ interface ICommand {
 
 class MoveForwardCommand implements ICommand {
     execute(input: Position): Position {
-        let xDisplacement = 0;
-        let yDisplacement = 0;
+        let [x, y] = [input.x, input.y];
 
         switch (input.direction) {
-            case Direction.North:
-                yDisplacement = 1;
-                break;
-            case Direction.East:
-                xDisplacement = 1;
-                break;
-            case Direction.South:
-                yDisplacement = -1;
-                break;
-            case Direction.West:
-                xDisplacement = -1;
-                break;
-            default:
-                throw new Error(`Unsupported Direction value '${input.direction}'`);
+            case Direction.North: y += 1; break;
+            case Direction.South: y -= 1; break;
+            case Direction.East: x += 1; break;
+            case Direction.West: x -= 1; break;
+            default: throw new Error(`Invalid direction ${input.direction}`);
         }
 
-        return new Position(
-            input.x + xDisplacement,
-            input.y + yDisplacement,
-            input.direction
-        );
+        return new Position(x, y, input.direction);
     }
 }
 
 class TurnLeftCommand implements ICommand {
     execute(input: Position): Position {
-        const newDirection: Direction = (() => {
-            switch (input.direction) {
-                case Direction.North: return Direction.West;
-                case Direction.East: return Direction.North;
-                case Direction.South: return Direction.East;
-                case Direction.West: return Direction.South;
-                default: throw new Error(`Unsupported Direction value '${input.direction}'`);
-            }
-        })();
+        const newDirection = {
+            [Direction.North]: Direction.West,
+            [Direction.West]: Direction.South,
+            [Direction.South]: Direction.East,
+            [Direction.East]: Direction.North
+        }[input.direction];
 
         return new Position(input.x, input.y, newDirection);
     }
@@ -65,31 +48,28 @@ class TurnLeftCommand implements ICommand {
 
 class TurnRightCommand implements ICommand {
     execute(input: Position): Position {
-        const newDirection: Direction = (() => {
-            switch (input.direction) {
-                case Direction.North: return Direction.East;
-                case Direction.East: return Direction.South;
-                case Direction.South: return Direction.West;
-                case Direction.West: return Direction.North;
-                default: throw new Error(`Unsupported Direction value '${input.direction}'`);
-            }
-        })();
+        const newDirection = {
+            [Direction.North]: Direction.East,
+            [Direction.East]: Direction.South,
+            [Direction.South]: Direction.West,
+            [Direction.West]: Direction.North
+        }[input.direction];
 
         return new Position(input.x, input.y, newDirection);
     }
 }
 
 class PositionTracer {
-    public minX: number = Number.POSITIVE_INFINITY;
-    public minY: number = Number.POSITIVE_INFINITY;
-    public maxX: number = Number.NEGATIVE_INFINITY;
-    public maxY: number = Number.NEGATIVE_INFINITY;
+    public minX = Infinity;
+    public minY = Infinity;
+    public maxX = -Infinity;
+    public maxY = -Infinity;
 
-    tracePosition(position: Position): void {
-        this.minX = Math.min(position.x, this.minX);
-        this.maxX = Math.max(position.x, this.maxX);
-        this.minY = Math.min(position.y, this.minY);
-        this.maxY = Math.max(position.y, this.maxY);
+    trace(position: Position): void {
+        this.minX = Math.min(this.minX, position.x);
+        this.maxX = Math.max(this.maxX, position.x);
+        this.minY = Math.min(this.minY, position.y);
+        this.maxY = Math.max(this.maxY, position.y);
     }
 }
 
@@ -98,7 +78,7 @@ function getCommandFromLetter(letter: string): ICommand {
         case 'G': return new MoveForwardCommand();
         case 'L': return new TurnLeftCommand();
         case 'R': return new TurnRightCommand();
-        default: throw new Error(`Unknown command letter '${letter}'`);
+        default: throw new Error(`Unknown command '${letter}'`);
     }
 }
 
@@ -107,31 +87,31 @@ function doesCircleExist(commands: string[]): string[] {
 }
 
 function doesSingleCircleExist(commandSequence: string): string {
-    const initialPosition = new Position(0, 0, Direction.North);
-    let resultPosition = initialPosition;
-    const positionTracer = new PositionTracer();
-
-    const commandList: ICommand[] = commandSequence.split('').map(getCommandFromLetter);
+    const initial = new Position(0, 0, Direction.North);
+    let current = initial;
+    const tracer = new PositionTracer();
+    const commands = commandSequence.split('').map(getCommandFromLetter);
 
     for (let i = 0; i < 4; i++) {
-        resultPosition = commandList.reduce((currPos, command) => {
-            const newPos = command.execute(currPos);
-            positionTracer.tracePosition(newPos);
-            return newPos;
-        }, resultPosition);
+        for (const cmd of commands) {
+            current = cmd.execute(current);
+            tracer.trace(current);
+        }
     }
 
-    const hasCircle = resultPosition.x === initialPosition.x && resultPosition.y === initialPosition.y;
+    const backToOrigin = current.x === 0 && current.y === 0;
+    const sameDirection = current.direction === Direction.North;
+    const isBounded = backToOrigin || !sameDirection;
 
-    if (hasCircle) {
-        console.log(
-            `Bounding box for command sequence '${commandSequence}' is: MinX = ${positionTracer.minX}, MinY = ${positionTracer.minY}, MaxX = ${positionTracer.maxX}, MaxY = ${positionTracer.maxY} `
-        );
+    if (isBounded) {
+        console.log(`✅ Bounding box for '${commandSequence}': MinX=${tracer.minX}, MinY=${tracer.minY}, MaxX=${tracer.maxX}, MaxY=${tracer.maxY}`);
+    } else {
+        console.log(`❌ Unbounded. Suggest appending 'L' → '${commandSequence + "L"}'`);
     }
 
-    return hasCircle ? "YES" : "NO";
+    return isBounded ? 'YES' : 'NO';
 }
 
-// Example usage:
-// const results = doesCircleExist(["GLGLGLG", "GRGRGRG"]);
-// console.log(results); // Output: ["YES", "NO"]
+// --- Test Example ---
+const results = doesCircleExist(["GLGLGLG", "GRGRGRG", "GG", "GGLLGG"]);
+console.log(results); // ["YES", "YES", "NO", "YES"]

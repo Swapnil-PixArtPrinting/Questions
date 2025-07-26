@@ -1,13 +1,13 @@
-
+// Interfaces and Base Classes
 export interface ICartItem {
     id: string;
-};
+}
 
 class Product implements ICartItem {
     id: string;
     productId: string;
     currentCost: number;
-    originalCost: number;
+    readonly originalCost: number;
 
     constructor(id: string, cost: number, productId: string) {
         this.id = id;
@@ -16,15 +16,20 @@ class Product implements ICartItem {
         this.originalCost = cost;
     }
 
-    updateCost(cost: number) {
-        this.currentCost = cost;
+    applyDiscount(percent: number) {
+        this.currentCost -= this.currentCost * (percent / 100);
+    }
+
+    applyFlatDiscount(amount: number) {
+        this.currentCost = Math.max(0, this.currentCost - amount);
     }
 }
 
 interface ICoupon extends ICartItem {
-    apply(cart: ICartItem[]): void;
+    apply(cart: ICartItem[], index: number): void;
 }
 
+// Coupon: X% off all products
 class PercentOffAllCoupon implements ICoupon {
     id: string;
     percentageOff: number;
@@ -34,15 +39,16 @@ class PercentOffAllCoupon implements ICoupon {
         this.percentageOff = percentageOff;
     }
 
-    apply(cart: ICartItem[]) {
-        cart.forEach((cartItem) => {
-            if (cartItem instanceof Product) {
-                cartItem.updateCost(cartItem.currentCost - (cartItem.currentCost * (this.percentageOff / 100)));
+    apply(cart: ICartItem[], _index: number): void {
+        for (const item of cart) {
+            if (item instanceof Product) {
+                item.applyDiscount(this.percentageOff);
             }
-        });
+        }
     }
 }
 
+// Coupon: X% off the next product
 class PercentOffNextCoupon implements ICoupon {
     id: string;
     percentageOff: number;
@@ -52,111 +58,106 @@ class PercentOffNextCoupon implements ICoupon {
         this.percentageOff = percentageOff;
     }
 
-    apply(cart: ICartItem[]) {
-        let foundCoupon = false;
-        for (let i = 0; i < cart.length; i++) {
-            const cartItem = cart[i];
-            if (foundCoupon && cartItem instanceof Product) {
-                cartItem.updateCost(cartItem.currentCost - (cartItem.currentCost * (this.percentageOff / 100)));
+    apply(cart: ICartItem[], index: number): void {
+        for (let i = index + 1; i < cart.length; i++) {
+            const next = cart[i];
+            if (next instanceof Product) {
+                next.applyDiscount(this.percentageOff);
                 break;
-            } else if (cartItem.id === this.id) {
-                foundCoupon = true;
             }
         }
     }
 }
 
-class DollarOffCoupon implements ICoupon {
+// Coupon: $X off Nth product of given type
+class DollarOffNthProductCoupon implements ICoupon {
     id: string;
-    dollarsOff: number;
-    instances: number;
+    amount: number;
+    targetCount: number;
     productId: string;
 
-    constructor(id: string, dollarsOff: number, instances: number, productId: string) {
+    constructor(id: string, amount: number, targetCount: number, productId: string) {
         this.id = id;
-        this.dollarsOff = dollarsOff;
-        this.instances = instances;
+        this.amount = amount;
+        this.targetCount = targetCount;
         this.productId = productId;
     }
 
-    apply(cart: ICartItem[]) {
-        let timesProductSeen = 0;
-        for (let i = 0; i < cart.length; i++) {
-            const cartItem = cart[i];
-            if (cartItem instanceof Product) {
-                if (cartItem.productId === this.productId) {
-                    timesProductSeen = timesProductSeen + 1;
-
-                    if (timesProductSeen === this.instances) {
-                        cartItem.updateCost(Math.max(cartItem.currentCost - this.dollarsOff, 0));
-                        break;
-                    }
+    apply(cart: ICartItem[], _index: number): void {
+        let count = 0;
+        for (const item of cart) {
+            if (item instanceof Product && item.productId === this.productId) {
+                count++;
+                if (count === this.targetCount) {
+                    item.applyFlatDiscount(this.amount);
+                    break;
                 }
             }
         }
     }
 }
 
-// javascript's instanceof doesn't work with interfaces :(
-const instanceOfCoupon = (object: any): object is ICoupon => {
-    return 'apply' in object;
-};
+// Type Guard
+function isCoupon(item: ICartItem): item is ICoupon {
+    return (item as ICoupon).apply !== undefined;
+}
 
+// Cart
 class Cart {
-    private cartItems: ICartItem[];
-
-    constructor(cartItems: ICartItem[]) {
-        this.cartItems = cartItems;
-    }
+    constructor(private items: ICartItem[]) { }
 
     totalPrice(): number {
-        this.cartItems.forEach((cartItem) => {
-            if (instanceOfCoupon(cartItem)) {
-                cartItem.apply(this.cartItems);
+        this.items.forEach((item, index) => {
+            if (isCoupon(item)) {
+                item.apply(this.items, index);
             }
         });
 
-        return this.cartItems.reduce((total, cartItem) => (cartItem instanceof Product ? total + cartItem.currentCost : total), 0);
+        return this.items.reduce((sum, item) =>
+            item instanceof Product ? sum + item.currentCost : sum, 0);
     }
 }
 
-// Cart 1
-const runCart1 = () => {
-    const coupon1 = new PercentOffNextCoupon('coup1', 10);
-    const item1 = new Product('item1', 10, 'postcardsorter');
-    const item2 = new Product('item2', 20, 'stationaryorganizer');
+// --- TEST CASES ---
 
-    const cart = new Cart([coupon1, item1, item2]);
-    console.log('Cart 1 total should be $29');
-    console.log(`Actual total: $${cart.totalPrice()} `);
-};
+function runCart(title: string, cartItems: ICartItem[]) {
+    const cart = new Cart(cartItems);
+    console.log(`${title}: Total = $${cart.totalPrice().toFixed(2)}`);
+}
+
+// Cart 1
+runCart("Cart 1", [
+    new PercentOffNextCoupon("c1", 10),
+    new Product("p1", 10, "postcardsorter"),
+    new Product("p2", 20, "stationaryorganizer"),
+]);
 
 // Cart 2
-const runCart2 = () => {
-    const coupon1 = new PercentOffNextCoupon('coup1', 10);
-    const item1 = new Product('item1', 10, 'postcardsorter');
-    const item2 = new Product('item2', 20, 'stationaryorganizer');
-
-    const cart = new Cart([item1, coupon1, item2]);
-    console.log('Cart 2 total should be $28');
-    console.log(`Actual total: $${cart.totalPrice()} `);
-};
+runCart("Cart 2", [
+    new Product("p1", 10, "postcardsorter"),
+    new PercentOffNextCoupon("c1", 10),
+    new Product("p2", 20, "stationaryorganizer"),
+]);
 
 // Cart 3
-const runCart3 = () => {
-    const item1 = new Product('item1', 10, 'postcardsorter');
-    const coupon1 = new DollarOffCoupon('coup1', 2, 2, 'postcardsorter');
-    const coupon2 = new PercentOffAllCoupon('coup2', 25);
-    const coupon3 = new PercentOffNextCoupon('coup3', 10);
-    const item2 = new Product('item2', 10, 'postcardsorter');
+runCart("Cart 3", [
+    new Product("p1", 10, "postcardsorter"),
+    new DollarOffNthProductCoupon("c1", 2, 2, "postcardsorter"),
+    new PercentOffAllCoupon("c2", 25),
+    new PercentOffNextCoupon("c3", 10),
+    new Product("p2", 10, "postcardsorter"),
+]);
 
-    const cart = new Cart([item1, coupon1, coupon2, coupon3, item2]);
-    console.log('Cart 3 total should be $12.90');
-    console.log(`Actual total: $${cart.totalPrice()} `);
-};
-
-
-runCart1();
-runCart2();
-runCart3();
-
+// Complex Cart
+runCart("Complex Cart", [
+    new PercentOffAllCoupon("c1", 5),
+    new Product("p1", 10, "postcardsorter"),
+    new Product("p2", 15, "stationaryorganizer"),
+    new DollarOffNthProductCoupon("c2", 5, 3, "postcardsorter"),
+    new PercentOffNextCoupon("c3", 50),
+    new Product("p3", 10, "postcardsorter"),
+    new Product("p4", 18, "businesscardholder"),
+    new DollarOffNthProductCoupon("c4", 2, 2, "postcardsorter"),
+    new Product("p5", 16, "postcardsorter"),
+    new Product("p6", 10, "postcardsorter"),
+]);
