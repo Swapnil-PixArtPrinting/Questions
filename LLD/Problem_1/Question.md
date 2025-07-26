@@ -49,14 +49,90 @@ As the waiter is delivering the order to the kitchen, a customer at another tabl
 
 #### Solution:
 
-![Robot restaurant class diagram](./Robot-restaurant-class-diagram.jpg)
+![Robot restaurant class diagram](./Robot-restaurant-class-diagram-2.png)
 
-There are many approaches to this problem. This is just one.
 
-An interface `IRestaurantItem` is for any object in the restaurant that can be manipulated (say, carried by a waiter), such as a food item, a table, a menu, or an order.
+Here's the complete **Markdown explanation** of your solution that you can copy and paste to share with your interviewer:
 
-We get commonality between menus, orders, bills, and receipts as lists of priced order items, some with totals.
+---
 
-Jobs for waiters and chefs are different, but they're all jobs and therefore can all be queued as work in a WorkAllocator. The master Scheduler receives all requests and assigns all work.
+# 🤖 Robot Waitstaff System – Low-Level Design Explanation
 
-*Different candidates, however, might focus on very different things. The most important goal is to judge their OOD or general Design skills, not for them to come up with a particular set of classes. Give the candidate some flexibility in solving the problem, but only if their chosen direction lets you fairly judge their skills.*
+## ✅ High-Level Summary
+
+I designed a scalable, event-driven system to replace human waitstaff with robots in a restaurant. The goal was to handle **food orders**, **delivery**, and **on-demand requests (like water)** while maintaining **high efficiency** and **customer satisfaction**.
+
+---
+
+## 🧱 Key Components
+
+| Component        | Role                                                              |
+| ---------------- | ----------------------------------------------------------------- |
+| `Customer`       | Requests food or water. Interacts with waiter and order manager.  |
+| `WaiterRobot`    | Maintains a task queue. Delivers food or fulfills water requests. |
+| `OrderManager`   | Central async order tracker. Emits events when food is ready.     |
+| `KitchenAdapter` | Connects to third-party `Kitchen` interface.                      |
+| `Restaurant`     | Manages setup: tables, customers, and waiters.                    |
+
+---
+
+## 🔄 Flow for Food Order and Water Request
+
+### 📌 Use Case 1: Customer Orders Food
+
+1. `Customer.orderFood(item)` creates an `Order`.
+2. `OrderManager.placeOrder()` forwards it to `KitchenAdapter`.
+3. `OrderManager` periodically checks if the kitchen marks the order ready.
+4. When ready, `OrderManager` emits `orderReady`.
+5. An available `WaiterRobot` picks the task from the event and delivers food.
+
+### 📌 Use Case 2: Water Request
+
+1. `Customer.requestWater()` calls `WaiterRobot.enqueueTask()`.
+2. The waiter queues and fulfills the water request independently.
+
+---
+
+## ⚙️ Asynchronous & Event-Driven Behavior
+
+* `OrderManager` uses `setInterval` to **poll asynchronously** for kitchen readiness.
+* `WaiterRobot` has a **FIFO task queue**, allowing multitasking.
+* **Delivery is out-of-order** — the system delivers food as soon as it’s ready, not as per request sequence.
+
+---
+
+## 📐 OOP & Design Principles Used
+
+| Principle                 | Application                                                                |
+| ------------------------- | -------------------------------------------------------------------------- |
+| **Single Responsibility** | Each class has one focused job (e.g., `OrderManager` tracks orders only).  |
+| **Observer Pattern**      | `EventEmitter` notifies waiters when orders are ready.                     |
+| **Open/Closed**           | System supports new task types without changing existing logic.            |
+| **Encapsulation**         | Each class manages its own logic cleanly and privately.                    |
+| **Strategy-ready**        | `KitchenAdapter` wraps external interface, allowing testable abstractions. |
+
+---
+
+## 🚀 Scalability Strengths
+
+* Add more waiters to handle load — the system remains responsive.
+* Water requests don’t block food delivery thanks to independent task queues.
+* Orders are processed based on readiness, not submission time — improving throughput.
+* Easy to extend: priority queues, waiter load balancing, or smart table mapping.
+
+---
+
+## ✂️ Simplifications Made
+
+> I started with more layers like `Dispatcher` and a separate `Task` class, but I removed them after realizing the `WaiterRobot` could manage task queuing itself. This reduced complexity while preserving modularity and extensibility.
+
+---
+
+## 🧪 Possible Extensions
+
+* Add priorities to tasks (e.g., urgent delivery vs water).
+* Improve kitchen integration to be fully async (replace polling with WebSocket events).
+* Add a `Host` class to manage seating and waiters dynamically.
+* Include retry logic or kitchen timeouts.
+
+---
