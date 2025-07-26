@@ -80,6 +80,7 @@ This TypeScript solution simulates a shopping cart with support for coupons that
 
 ### UML
 
+```
 +----------------------+
 |      ICartItem       |  <<interface>>
 +----------------------+
@@ -124,7 +125,7 @@ This TypeScript solution simulates a shopping cart with support for coupons that
    Uses a list of ICartItem
    Applies coupons in sequence
 
-
+```
 ---
 
 ## 💡 Problem
