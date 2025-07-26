@@ -1,4 +1,9 @@
-type Direction = 'North' | 'East' | 'South' | 'West';
+enum Direction {
+    North = 'North',
+    East = 'East',
+    South = 'South',
+    West = 'West'
+}
 
 class Position {
     constructor(
@@ -18,16 +23,16 @@ class MoveForwardCommand implements ICommand {
         let yDisplacement = 0;
 
         switch (input.direction) {
-            case 'North':
+            case Direction.North:
                 yDisplacement = 1;
                 break;
-            case 'East':
+            case Direction.East:
                 xDisplacement = 1;
                 break;
-            case 'South':
+            case Direction.South:
                 yDisplacement = -1;
                 break;
-            case 'West':
+            case Direction.West:
                 xDisplacement = -1;
                 break;
             default:
@@ -46,10 +51,10 @@ class TurnLeftCommand implements ICommand {
     execute(input: Position): Position {
         const newDirection: Direction = (() => {
             switch (input.direction) {
-                case 'North': return 'West';
-                case 'East': return 'North';
-                case 'South': return 'East';
-                case 'West': return 'South';
+                case Direction.North: return Direction.West;
+                case Direction.East: return Direction.North;
+                case Direction.South: return Direction.East;
+                case Direction.West: return Direction.South;
                 default: throw new Error(`Unsupported Direction value '${input.direction}'`);
             }
         })();
@@ -62,10 +67,10 @@ class TurnRightCommand implements ICommand {
     execute(input: Position): Position {
         const newDirection: Direction = (() => {
             switch (input.direction) {
-                case 'North': return 'East';
-                case 'East': return 'South';
-                case 'South': return 'West';
-                case 'West': return 'North';
+                case Direction.North: return Direction.East;
+                case Direction.East: return Direction.South;
+                case Direction.South: return Direction.West;
+                case Direction.West: return Direction.North;
                 default: throw new Error(`Unsupported Direction value '${input.direction}'`);
             }
         })();
@@ -102,7 +107,7 @@ function doesCircleExist(commands: string[]): string[] {
 }
 
 function doesSingleCircleExist(commandSequence: string): string {
-    const initialPosition = new Position(0, 0, 'North');
+    const initialPosition = new Position(0, 0, Direction.North);
     let resultPosition = initialPosition;
     const positionTracer = new PositionTracer();
 
