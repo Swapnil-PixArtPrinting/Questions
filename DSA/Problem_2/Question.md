@@ -27,7 +27,6 @@ Absolutely! Here's a corrected and **copy-paste friendly Markdown README** for y
 
 ---
 
-````markdown
 # 🤖 Robot Bounded Movement Checker
 
 This TypeScript module simulates a robot on an infinite 2D plane that follows a sequence of commands in an **infinite loop**.
@@ -144,27 +143,3 @@ Produces:
 * Animate path using canvas/SVG
 
 ---
-
-## 📜 License
-
-MIT – free to use, modify, and share.
-
----
-
-## 👨‍💻 Author
-
-Generated and optimized by \[ChatGPT + User Collaboration]
-
-```
-
----
-
-Let me know if you'd like the above delivered in:
-
-- PDF format
-- Rendered GitHub-style preview
-- VSCode snippet format
-- Or split into a README.md and .ts file set
-
-You're all set for interviews or GitHub!
-```

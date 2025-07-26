@@ -24,7 +24,6 @@ Here is the **copiable Markdown** version of the **Product Catalog Indexing Syst
 
 ---
 
-```md
 # 🛒 Product Catalog Indexing System – HLD (AWS-Based)
 
 ## 🎯 Objective
