@@ -1,5 +1,5 @@
 
-interface ICartItem {
+export interface ICartItem {
     id: string;
 };
 
