@@ -1,4 +1,4 @@
-enum Direction {
+export enum Direction {
     North = 'North',
     East = 'East',
     South = 'South',
@@ -92,11 +92,9 @@ function doesSingleCircleExist(commandSequence: string): string {
     const tracer = new PositionTracer();
     const commands = commandSequence.split('').map(getCommandFromLetter);
 
-    for (let i = 0; i < 4; i++) {
-        for (const cmd of commands) {
-            current = cmd.execute(current);
-            tracer.trace(current);
-        }
+    for (const cmd of commands) {
+        current = cmd.execute(current);
+        tracer.trace(current);
     }
 
     const backToOrigin = current.x === 0 && current.y === 0;
