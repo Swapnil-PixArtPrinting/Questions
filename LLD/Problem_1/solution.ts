@@ -106,11 +106,24 @@ class WaiterRobot {
 
     constructor(public id: number, private orderManager: OrderManager) {
         this.orderManager.on('orderReady', (order: Order) => {
-            this.enqueueTask({ type: 'deliver', order });
+            if (order.status !== 'delivered') {
+                this.enqueueTask({ type: 'deliver', order });
+            }
         });
     }
 
+    takeOrder(item: string, tableId: number) {
+        const order = new Order(item, tableId);
+        console.log(`WaiterRobot${this.id}: Taking order for ${item} from table ${tableId}`);
+        this.orderManager.placeOrder(order);
+        return true;
+    }
+
     enqueueTask(task: WaiterTask) {
+        if (task.type === 'deliver' && task.order.status === 'delivered') {
+            console.log(`WaiterRobot${this.id}: Order ${task.order.item} already delivered to table ${task.order.tableId}`);
+            return;
+        }
         this.taskQueue.push(task);
         this.processQueue();
     }
@@ -127,7 +140,9 @@ class WaiterRobot {
 
         switch (task.type) {
             case 'deliver':
-                this.deliverFood(task.order);
+                if (task.order.status !== 'delivered') {
+                    this.deliverFood(task.order);
+                }
                 break;
             case 'water':
                 this.serveWater(task.tableId);
@@ -154,18 +169,51 @@ class Customer {
         public name: string,
         public tableId: number,
         private waiter: WaiterRobot,
-        private orderManager: OrderManager
+        private menu: Menu
     ) { }
 
-    orderFood(item: string) {
-        const order = new Order(item, this.tableId);
+    orderFood(item: string): boolean {
+        if (!this.menu.hasItem(item)) {
+            console.log(`${this.name}: Sorry, ${item} is not on the menu`);
+            return false;
+        }
         console.log(`${this.name}: Ordering ${item}`);
-        this.orderManager.placeOrder(order);
+        return this.waiter.takeOrder(item, this.tableId);
     }
 
     requestWater() {
         console.log(`${this.name}: Requesting water`);
         this.waiter.enqueueTask({ type: 'water', tableId: this.tableId });
+    }
+}
+
+// --- Menu ---
+class MenuItem {
+    constructor(
+        public name: string,
+        public price: number,
+        public description: string,
+        public preparationTime: number = 10 // in minutes
+    ) {}
+}
+
+class Menu {
+    private items: Map<string, MenuItem> = new Map();
+
+    addItem(item: MenuItem) {
+        this.items.set(item.name, item);
+    }
+
+    getItem(name: string): MenuItem | undefined {
+        return this.items.get(name);
+    }
+
+    getAllItems(): MenuItem[] {
+        return Array.from(this.items.values());
+    }
+
+    hasItem(name: string): boolean {
+        return this.items.has(name);
     }
 }
 
@@ -178,6 +226,19 @@ class Restaurant {
         new WaiterRobot(2, this.orderManager)
     ];
     private tables: Table[] = [];
+    private menu: Menu = new Menu();
+
+    constructor() {
+        // Initialize menu with some items
+        this.initializeMenu();
+    }
+
+    private initializeMenu() {
+        this.menu.addItem(new MenuItem("Ratatouille", 15.99, "Classic French vegetable dish", 20));
+        this.menu.addItem(new MenuItem("Salad", 8.99, "Fresh garden salad", 5));
+        this.menu.addItem(new MenuItem("Steak", 25.99, "Grilled to perfection", 25));
+        this.menu.addItem(new MenuItem("Pasta", 12.99, "House-made pasta", 15));
+    }
 
     addCustomerToTable(customerName: string, tableId: number) {
         let table = this.tables.find(t => t.id === tableId);
@@ -186,10 +247,11 @@ class Restaurant {
             this.tables.push(table);
         }
         const waiter = this.waiters.find(w => w.isFree()) || this.waiters[0];
-        const customer = new Customer(customerName, tableId, waiter, this.orderManager);
+        const customer = new Customer(customerName, tableId, waiter, this.menu);
         table.customers.push(customer);
         return customer;
     }
+
 }
 
 // --- Example Usage ---

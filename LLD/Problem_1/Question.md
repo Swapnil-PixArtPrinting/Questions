@@ -49,7 +49,77 @@ As the waiter is delivering the order to the kitchen, a customer at another tabl
 
 #### Solution:
 
-![Robot restaurant class diagram](./Robot-restaurant-class-diagram-2.png)
+```mermaid
+
+classDiagram
+    class KitchenAdapter {
+        +makeOrder(order: Order)
+        +isReady(order: Order): boolean
+        +getOrder(order: Order): Order
+    }
+
+    class OrderManager {
+        -pendingOrders: Order[]
+        +placeOrder(order: Order)
+        +emit(event: string, order: Order)
+        +on(event: string, callback: fn)
+    }
+
+    class Order {
+        +id: number
+        +item: string
+        +tableId: number
+        +status: 'pending' | 'ready' | 'delivered'
+    }
+
+    class Table {
+        +id: number
+        +customers: Customer[]
+    }
+
+    class WaiterRobot {
+        +id: number
+        +isFree(): boolean
+        +enqueueTask(task: WaiterTask)
+    }
+
+    class Customer {
+        +name: string
+        +orderFood(item: string)
+        +requestWater()
+    }
+
+    class Restaurant {
+        -kitchen: KitchenAdapter
+        -orderManager: OrderManager
+        -waiters: WaiterRobot[]
+        -tables: Table[]
+        +addCustomerToTable(name: string, tableId: number): Customer
+    }
+
+    %% Relationships
+    Restaurant --> KitchenAdapter
+    Restaurant --> OrderManager
+    Restaurant --> WaiterRobot
+    Restaurant --> Table
+    Table --> Customer
+    Customer --> WaiterRobot
+    Customer --> OrderManager
+    WaiterRobot --> OrderManager
+    OrderManager --> KitchenAdapter
+    KitchenAdapter --> Order
+    WaiterRobot --> Order
+
+    %% Interfaces
+    class KitchenAPI {
+        +Make(order: Order)
+        +IsReady(order: Order): boolean
+        +Get(order: Order): Order
+    }
+    KitchenAdapter ..|> KitchenAPI
+
+
+```
 
 
 Here's the complete **Markdown explanation** of your solution that you can copy and paste to share with your interviewer:
