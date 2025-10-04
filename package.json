@@ -1,5 +1,13 @@
 {
+  "name": "coding-questions",
+  "version": "1.0.0",
+  "description": "Collection of DSA, HLD, and LLD coding questions and solutions",
+  "scripts": {
+    "start": "node select.js"
+  },
   "devDependencies": {
-    "@types/node": "^24.1.0"
+    "@types/node": "^24.1.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.4.2"
   }
 }

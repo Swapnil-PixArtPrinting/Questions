@@ -5,56 +5,58 @@ export interface ICartItem {
 
 class Product implements ICartItem {
     id: string;
-    productId: string;
+    productType: string;
     currentCost: number;
     readonly originalCost: number;
 
-    constructor(id: string, cost: number, productId: string) {
+    constructor(id: string, cost: number, productType: string) {
         this.id = id;
-        this.productId = productId;
+        this.productType = productType;
         this.currentCost = cost;
         this.originalCost = cost;
     }
 
-    applyDiscount(percent: number) {
-        this.currentCost -= this.currentCost * (percent / 100);
+    applyPercentageDiscount(percent: number) {
+        this.currentCost -= this.originalCost * (percent / 100);
     }
 
     applyFlatDiscount(amount: number) {
-        this.currentCost = Math.max(0, this.currentCost - amount);
+        this.currentCost = Math.max(0, this.originalCost - amount);
     }
 }
 
-interface ICoupon extends ICartItem {
-    apply(cart: ICartItem[], index: number): void;
+abstract class Coupon implements ICartItem {
+    id: string;
+    constructor(id: string) {
+        this.id = id;
+    }
+    abstract apply(cart: ICartItem[], index: number): void;
 }
 
 // Coupon: X% off all products
-class PercentOffAllCoupon implements ICoupon {
-    id: string;
+class PercentOffAllCoupon extends Coupon {
     percentageOff: number;
 
     constructor(id: string, percentageOff: number) {
-        this.id = id;
+        super(id);
         this.percentageOff = percentageOff;
     }
 
     apply(cart: ICartItem[], _index: number): void {
         for (const item of cart) {
             if (item instanceof Product) {
-                item.applyDiscount(this.percentageOff);
+                item.applyPercentageDiscount(this.percentageOff);
             }
         }
     }
 }
 
 // Coupon: X% off the next product
-class PercentOffNextCoupon implements ICoupon {
-    id: string;
+class PercentOffNextCoupon extends Coupon {
     percentageOff: number;
 
     constructor(id: string, percentageOff: number) {
-        this.id = id;
+        super(id);
         this.percentageOff = percentageOff;
     }
 
@@ -62,7 +64,7 @@ class PercentOffNextCoupon implements ICoupon {
         for (let i = index + 1; i < cart.length; i++) {
             const next = cart[i];
             if (next instanceof Product) {
-                next.applyDiscount(this.percentageOff);
+                next.applyPercentageDiscount(this.percentageOff);
                 break;
             }
         }
@@ -70,23 +72,22 @@ class PercentOffNextCoupon implements ICoupon {
 }
 
 // Coupon: $X off Nth product of given type
-class DollarOffNthProductCoupon implements ICoupon {
-    id: string;
+class DollarOffNthProductCoupon extends Coupon {
     amount: number;
     targetCount: number;
-    productId: string;
+    productType: string;
 
-    constructor(id: string, amount: number, targetCount: number, productId: string) {
-        this.id = id;
+    constructor(id: string, amount: number, targetCount: number, productType: string) {
+        super(id);
         this.amount = amount;
         this.targetCount = targetCount;
-        this.productId = productId;
+        this.productType = productType;
     }
 
     apply(cart: ICartItem[], _index: number): void {
         let count = 0;
         for (const item of cart) {
-            if (item instanceof Product && item.productId === this.productId) {
+            if (item instanceof Product && item.productType === this.productType) {
                 count++;
                 if (count === this.targetCount) {
                     item.applyFlatDiscount(this.amount);
@@ -98,8 +99,8 @@ class DollarOffNthProductCoupon implements ICoupon {
 }
 
 // Type Guard
-function isCoupon(item: ICartItem): item is ICoupon {
-    return (item as ICoupon).apply !== undefined;
+function isCoupon(item: ICartItem) {
+    return item instanceof Coupon;
 }
 
 // Cart
