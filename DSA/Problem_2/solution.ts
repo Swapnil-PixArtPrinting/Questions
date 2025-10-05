@@ -59,20 +59,6 @@ class TurnRightCommand implements ICommand {
     }
 }
 
-class PositionTracer {
-    public minX = Infinity;
-    public minY = Infinity;
-    public maxX = -Infinity;
-    public maxY = -Infinity;
-
-    trace(position: Position): void {
-        this.minX = Math.min(this.minX, position.x);
-        this.maxX = Math.max(this.maxX, position.x);
-        this.minY = Math.min(this.minY, position.y);
-        this.maxY = Math.max(this.maxY, position.y);
-    }
-}
-
 function getCommandFromLetter(letter: string): ICommand {
     switch (letter) {
         case 'G': return new MoveForwardCommand();
@@ -82,34 +68,53 @@ function getCommandFromLetter(letter: string): ICommand {
     }
 }
 
-function doesCircleExist(commands: string[]): string[] {
-    return commands.map(doesSingleCircleExist);
-}
-
 function doesSingleCircleExist(commandSequence: string): string {
     const initial = new Position(0, 0, Direction.North);
     let current = initial;
-    const tracer = new PositionTracer();
+    // const tracer = new PositionTracer();
     const commands = commandSequence.split('').map(getCommandFromLetter);
 
     for (const cmd of commands) {
         current = cmd.execute(current);
-        tracer.trace(current);
+        // tracer.trace(current);
     }
 
     const backToOrigin = current.x === 0 && current.y === 0;
-    const sameDirection = current.direction === Direction.North;
-    const isBounded = backToOrigin || !sameDirection;
+    const sameDirection = current.direction !== Direction.North;
+    const isBounded = backToOrigin && sameDirection;
 
-    if (isBounded) {
-        console.log(`✅ Bounding box for '${commandSequence}': MinX=${tracer.minX}, MinY=${tracer.minY}, MaxX=${tracer.maxX}, MaxY=${tracer.maxY}`);
-    } else {
-        console.log(`❌ Unbounded. Suggest appending 'L' → '${commandSequence + "L"}'`);
-    }
+    // Extended Output for clarity
+    // if (isBounded) {
+    //     console.log(`✅ Bounding box for '${commandSequence}': MinX=${tracer.minX}, MinY=${tracer.minY}, MaxX=${tracer.maxX}, MaxY=${tracer.maxY}`);
+    // } else {
+    //     console.log(`❌ Unbounded. Suggest appending 'L' → '${commandSequence + "L"}'`);
+    // }
 
     return isBounded ? 'YES' : 'NO';
 }
 
+function doesCircleExist(commands: string[]): string[] {
+    const output: string[] = [];
+    commands.forEach(cmd => {
+        output.push(doesSingleCircleExist(cmd));
+    });
+    return output;
+}
+
+// class PositionTracer {
+//     public minX = Infinity;
+//     public minY = Infinity;
+//     public maxX = -Infinity;
+//     public maxY = -Infinity;
+
+//     trace(position: Position): void {
+//         this.minX = Math.min(this.minX, position.x);
+//         this.maxX = Math.max(this.maxX, position.x);
+//         this.minY = Math.min(this.minY, position.y);
+//         this.maxY = Math.max(this.maxY, position.y);
+//     }
+// }
+
 // --- Test Example ---
-const results = doesCircleExist(["GLGLGLG", "GRGRGRG", "GG", "GGLLGG"]);
-console.log(results); // ["YES", "YES", "NO", "YES"]
+const results = doesCircleExist(["GLGLGLG", "GRGRGRG", "GG", "GGLLGG", "GLGRGL"]);
+console.log(results); // ["YES", "YES", "NO", "YES", "NO"]
