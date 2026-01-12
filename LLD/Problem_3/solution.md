@@ -1,17 +1,48 @@
-# Graphic Designer Application - LLD Solution
+# Graphic Designer Application - LLD Solution (Refactored)
 
 ## Problem Overview
 Design a graphic designer application that allows users to create, manipulate, and arrange different graphical elements (Picture, TextBox, Rectangle) with full undo/redo functionality for all operations.
 
-## Solution Approach
+## 🔄 Architectural Refactoring Summary
 
-This solution implements several key design patterns to create a robust, extensible graphic design system:
+This solution has been refactored to improve architecture and support multi-document workflows:
+
+### ✅ What Changed
+| **Before** | **After** | **Benefits** |
+|------------|-----------|--------------|
+| `Editor` + `CommandManager` | `Design` (merged) | Simplified architecture, reduced object interactions |
+| Single editor instance | `Workspace` with `designs: Design[]` | Multi-document support, better organization |
+| Delegated command management | Integrated command handling | Better encapsulation, improved performance |
+| Generic "Editor" naming | Semantic "Design" naming | Clearer domain modeling |
+
+### 🏗️ New Class Structure
+```typescript
+class Workspace {
+    public designs: Design[] = [];  // Multiple design documents
+}
+
+class Design {  // Formerly Editor
+    private elements: Map<string, DesignElement> = new Map();
+    private undoStack: Command[] = [];  // Integrated command management
+    private redoStack: Command[] = [];  // No separate CommandManager needed
+}
+```
+
+## Refactored Solution Approach
+
+This solution implements several key design patterns with an improved architecture:
 
 1. **Command Pattern**: For undo/redo functionality
 2. **Prototype Pattern**: For cloning design elements  
 3. **Template Method Pattern**: Base DesignElement with abstract methods
 4. **Memento Pattern**: State preservation for undo operations
 5. **Factory Pattern**: Could be added for element creation
+
+### Key Architectural Changes
+- **Merged CommandManager into Design**: Eliminated separate CommandManager class by integrating command management directly into the Design class
+- **Renamed Editor to Design**: Better semantic meaning - each Design represents a canvas/design document
+- **Added Workspace Class**: Container for multiple Design instances, supporting multi-document workflows
+- **Independent Design Operations**: Each Design maintains its own undo/redo stack and element collection
 
 ## Complete System Architecture
 
@@ -63,14 +94,14 @@ classDiagram
     }
     
     class InsertCommand {
-        -editor: Editor
+        -design: Design
         -element: DesignElement
         +execute void
         +undo void
     }
     
     class DeleteCommand {
-        -editor: Editor
+        -design: Design
         -id: string
         -backup: DesignElement
         +execute void
@@ -78,7 +109,7 @@ classDiagram
     }
     
     class MoveCommand {
-        -editor: Editor
+        -design: Design
         -id: string
         -newX: number
         -newY: number
@@ -89,7 +120,7 @@ classDiagram
     }
     
     class ChangeColorCommand {
-        -editor: Editor
+        -design: Design
         -id: string
         -newColor: string
         -prevColor: string
@@ -98,7 +129,7 @@ classDiagram
     }
     
     class ChangeTextCommand {
-        -editor: Editor
+        -design: Design
         -id: string
         -newText: string
         -prevText: string
@@ -106,17 +137,10 @@ classDiagram
         +undo void
     }
     
-    class CommandManager {
+    class Design {
+        -elements: Map~string, DesignElement~
         -undoStack: Command[]
         -redoStack: Command[]
-        +executeCommand(cmd: Command) void
-        +undo void
-        +redo void
-    }
-    
-    class Editor {
-        -elements: Map~string, DesignElement~
-        -commandManager: CommandManager
         +execute(cmd: Command) void
         +undo void
         +redo void
@@ -129,6 +153,14 @@ classDiagram
         +printState void
     }
     
+    class Workspace {
+        +designs: Design[]
+        +addDesign(design: Design) void
+        +removeDesign(index: number) void
+        +getDesign(index: number) Design
+        +printAllDesigns void
+    }
+    
     %% Relationships
     DesignElement --> ElementType
     DesignElement <|-- Picture
@@ -139,42 +171,42 @@ classDiagram
     Command <|-- MoveCommand
     Command <|-- ChangeColorCommand
     Command <|-- ChangeTextCommand
-    InsertCommand --> Editor
+    InsertCommand --> Design
     InsertCommand --> DesignElement
-    DeleteCommand --> Editor
-    MoveCommand --> Editor
-    ChangeColorCommand --> Editor
-    ChangeTextCommand --> Editor
-    CommandManager --> Command
-    Editor --> CommandManager
-    Editor --> DesignElement
+    DeleteCommand --> Design
+    MoveCommand --> Design
+    ChangeColorCommand --> Design
+    ChangeTextCommand --> Design
+    Design --> Command
+    Design --> DesignElement
+    Workspace --> Design
 ```
 
-## Command Pattern Implementation
+## Command Pattern Implementation (Refactored)
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant E as Editor
-    participant CM as CommandManager
+    participant W as Workspace
+    participant D as Design
     participant C as Command
     participant EL as Element
     
-    U->>E: Perform operation (e.g., move element)
-    E->>C: Create Command (MoveCommand)
-    E->>CM: executeCommand(cmd)
-    CM->>C: execute
+    U->>W: Select Design
+    W->>D: Get Design Instance
+    U->>D: Perform operation (e.g., move element)
+    D->>C: Create Command (MoveCommand)
+    D->>C: execute
     C->>EL: Modify element state
-    CM->>CM: Push to undoStack
-    CM->>CM: Clear redoStack
+    D->>D: Push to undoStack
+    D->>D: Clear redoStack
     
     Note over U,EL: User wants to undo
-    U->>E: undo
-    E->>CM: undo
-    CM->>CM: Pop from undoStack
-    CM->>C: undo
+    U->>D: undo
+    D->>D: Pop from undoStack
+    D->>C: undo
     C->>EL: Restore previous state
-    CM->>CM: Push to redoStack
+    D->>D: Push to redoStack
 ```
 
 ## Undo/Redo State Management
@@ -241,7 +273,68 @@ graph TD
     I --> L[clone implementation]
 ```
 
-## Editor Operations Flow
+## Workspace Architecture
+
+```mermaid
+flowchart TD
+    A[Workspace] --> B[Design 1]
+    A --> C[Design 2]
+    A --> D[Design N...]
+    
+    B --> B1[Elements Map]
+    B --> B2[Undo Stack]
+    B --> B3[Redo Stack]
+    
+    C --> C1[Elements Map]
+    C --> C2[Undo Stack]
+    C --> C3[Redo Stack]
+    
+    D --> D1[Elements Map]
+    D --> D2[Undo Stack]
+    D --> D3[Redo Stack]
+    
+    B1 --> E1[Picture Elements]
+    B1 --> E2[Rectangle Elements]
+    B1 --> E3[TextBox Elements]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#f3e5f5
+    style D fill:#f3e5f5
+```
+
+### Multi-Design Management Benefits
+- **Independent Operation Histories**: Each design maintains its own undo/redo stack
+- **Parallel Editing**: Multiple designs can be worked on simultaneously
+- **Resource Isolation**: Changes in one design don't affect others
+- **Scalable Architecture**: Easy to add/remove designs from workspace
+
+### Example Usage
+```typescript
+// Create workspace
+const workspace = new Workspace();
+
+// Create multiple designs
+const logo = new Design();
+const banner = new Design();
+
+// Add elements to different designs
+logo.execute(new InsertCommand(logo, new Picture("logo1", 0, 0)));
+banner.execute(new InsertCommand(banner, new TextBox("title", 10, 10, "blue", "Welcome")));
+
+// Add designs to workspace
+workspace.addDesign(logo);
+workspace.addDesign(banner);
+
+// Independent undo operations
+logo.undo();    // Only affects logo design
+banner.undo();  // Only affects banner design
+
+// View all designs
+workspace.printAllDesigns();
+```
+
+## Design Operations Flow (Refactored)
 
 ```mermaid
 flowchart TD
@@ -255,18 +348,18 @@ flowchart TD
     C --> G[Create InsertCommand]
     D --> H{Modification Type}
     E --> I[Create DeleteCommand]
-    F --> J[CommandManager Operation]
+    F --> J[Design Internal Operation]
     
     H -->|Move| K[Create MoveCommand]
     H -->|Color| L[Create ChangeColorCommand]
     H -->|Text| M[Create ChangeTextCommand]
     
-    G --> N[Execute via CommandManager]
+    G --> N[Execute via Design.execute]
     I --> N
     K --> N
     L --> N
     M --> N
-    J --> O[Update Editor State]
+    J --> O[Update Design State]
     N --> O
 ```
 
@@ -442,6 +535,46 @@ classDiagram
     Command <|-- GroupCommand
 ```
 
+## Refactored Architecture Benefits
+
+### 1. **Simplified Command Management**
+- **Before**: Separate `CommandManager` class with delegation pattern
+- **After**: Integrated command management directly into `Design` class
+- **Benefit**: Reduced complexity, fewer object interactions, better encapsulation
+
+### 2. **Enhanced Multi-Document Support**
+- **New Feature**: `Workspace` class managing multiple `Design` instances
+- **Benefit**: Support for multiple concurrent design documents
+- **Use Case**: Users can work on multiple projects simultaneously
+
+### 3. **Independent Design Operations**
+- **Architecture**: Each `Design` maintains its own undo/redo stacks
+- **Benefit**: Operations in one design don't affect others
+- **Memory**: Isolated command histories prevent cross-design interference
+
+### 4. **Improved Semantic Clarity**
+- **Naming**: `Editor` → `Design` better represents individual design documents
+- **Structure**: `Workspace.designs: Design[]` clearly expresses the relationship
+- **API**: More intuitive method calls and class responsibilities
+
+### 5. **Better Scalability**
+```mermaid
+graph TB
+    subgraph "Old Architecture"
+        A1[Editor] --> A2[CommandManager]
+        A1 --> A3[Elements]
+    end
+    
+    subgraph "New Architecture"
+        B1[Workspace] --> B2[Design 1]
+        B1 --> B3[Design 2]
+        B1 --> B4[Design N]
+        B2 --> B5[Elements + Commands]
+        B3 --> B6[Elements + Commands]
+        B4 --> B7[Elements + Commands]
+    end
+```
+
 ## Key Features
 
 ### 1. **Full Undo/Redo Support**
@@ -454,21 +587,42 @@ classDiagram
 - Prototype pattern enables deep copying of complex elements
 - Type-safe operations through inheritance hierarchy
 
-### 3. **Robust Command Management**
+### 3. **Integrated Command Management**
 - Each operation encapsulated as a command object
+- Direct command management within Design class (no separate CommandManager)
 - Consistent execute/undo interface across all operations
 - Automatic redo stack clearing on new operations
 
-### 4. **Memory Efficient Design**
-- Elements stored in efficient Map structure
+### 4. **Multi-Design Workspace**
+- Support for multiple concurrent design documents
+- Independent undo/redo stacks per design
+- Workspace-level design management operations
+- Isolated element collections per design
+
+### 5. **Memory Efficient Design**
+- Elements stored in efficient Map structure per design
 - Minimal memory overhead for command storage
 - Lazy evaluation of backup states
+- Independent memory management per design instance
 
 ## Performance Characteristics
 
-- **Element Access**: O(1) with Map-based storage
+### Single Design Operations
+- **Element Access**: O(1) with Map-based storage per design
 - **Command Execution**: O(1) for single operations
-- **Undo/Redo**: O(1) stack operations
-- **Memory Usage**: O(n + c) where n = elements, c = command history
+- **Undo/Redo**: O(1) stack operations per design
+- **Memory Usage per Design**: O(n + c) where n = elements, c = command history
 
-This design provides a solid foundation for a graphic design application with professional-grade undo/redo functionality while maintaining clean separation of concerns and extensibility.
+### Workspace Operations  
+- **Design Access**: O(1) array-based access to designs
+- **Multi-Design Memory**: O(d × (n + c)) where d = number of designs
+- **Design Isolation**: Independent performance per design instance
+- **Scalability**: Linear scaling with number of designs
+
+### Architecture Benefits
+- **Reduced Object Creation**: Eliminated CommandManager delegation overhead
+- **Better Cache Locality**: Commands and elements co-located in Design class  
+- **Independent Scaling**: Each design's performance is isolated
+- **Memory Efficiency**: No shared state between designs reduces contention
+
+This refactored design provides a robust foundation for a multi-document graphic design application with professional-grade undo/redo functionality, improved performance characteristics, and enhanced scalability for concurrent design workflows.

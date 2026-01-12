@@ -1,3 +1,21 @@
+/**
+ * Graphic Designer Application - Refactored Architecture
+ * 
+ * Key Changes:
+ * 1. Merged CommandManager functionality into Design class (formerly Editor)
+ * 2. Renamed Editor to Design for better semantic meaning
+ * 3. Added Workspace class to manage multiple Design instances
+ * 4. Workspace contains `public designs: Design[]` as requested
+ * 
+ * Architecture Benefits:
+ * - Simplified class hierarchy by eliminating separate CommandManager
+ * - Multiple design instances can be managed within a single workspace
+ * - Each Design maintains its own undo/redo stack independently
+ * - Clear separation between workspace management and design operations
+ */
+
+(function(){
+    
 // --- Enums ---
 enum ElementType {
     PICTURE = 'PICTURE',
@@ -76,30 +94,30 @@ interface Command {
 
 // --- Command Implementations ---
 class InsertCommand implements Command {
-    constructor(private editor: Editor, private element: DesignElement) { }
+    constructor(private design: Design, private element: DesignElement) { }
 
     execute() {
-        this.editor.addElement(this.element);
+        this.design.addElement(this.element);
     }
 
     undo() {
-        this.editor.removeElement(this.element.id);
+        this.design.removeElement(this.element.id);
     }
 }
 
 class DeleteCommand implements Command {
     private backup: DesignElement | undefined;
-    constructor(private editor: Editor, private id: string) {
-        this.backup = editor.getElement(id)?.clone();
+    constructor(private design: Design, private id: string) {
+        this.backup = design.getElement(id)?.clone();
     }
 
     execute() {
-        this.editor.removeElement(this.id);
+        this.design.removeElement(this.id);
     }
 
     undo() {
         if (this.backup) {
-            this.editor.addElement(this.backup);
+            this.design.addElement(this.backup);
         }
     }
 }
@@ -107,8 +125,8 @@ class DeleteCommand implements Command {
 class MoveCommand implements Command {
     private prevX: number = 0;
     private prevY: number = 0;
-    constructor(private editor: Editor, private id: string, private newX: number, private newY: number) {
-        const el = editor.getElement(id);
+    constructor(private design: Design, private id: string, private newX: number, private newY: number) {
+        const el = design.getElement(id);
         if (el) {
             this.prevX = el.x;
             this.prevY = el.y;
@@ -116,58 +134,65 @@ class MoveCommand implements Command {
     }
 
     execute() {
-        this.editor.moveElement(this.id, this.newX, this.newY);
+        this.design.moveElement(this.id, this.newX, this.newY);
     }
 
     undo() {
-        this.editor.moveElement(this.id, this.prevX, this.prevY);
+        this.design.moveElement(this.id, this.prevX, this.prevY);
     }
 }
 
 class ChangeColorCommand implements Command {
     private prevColor: string = '';
-    constructor(private editor: Editor, private id: string, private newColor: string) {
-        const el = editor.getElement(id);
+    constructor(private design: Design, private id: string, private newColor: string) {
+        const el = design.getElement(id);
         if (el && 'color' in el) {
             this.prevColor = (el as Rectangle | TextBox).color;
         }
     }
 
     execute() {
-        this.editor.changeColor(this.id, this.newColor);
+        this.design.changeColor(this.id, this.newColor);
     }
 
     undo() {
-        this.editor.changeColor(this.id, this.prevColor);
+        this.design.changeColor(this.id, this.prevColor);
     }
 }
 
 class ChangeTextCommand implements Command {
     private prevText: string = '';
-    constructor(private editor: Editor, private id: string, private newText: string) {
-        const el = editor.getElement(id);
+    constructor(private design: Design, private id: string, private newText: string) {
+        const el = design.getElement(id);
         if (el instanceof TextBox) {
             this.prevText = el.text;
         }
     }
 
     execute() {
-        this.editor.changeText(this.id, this.newText);
+        this.design.changeText(this.id, this.newText);
     }
 
     undo() {
-        this.editor.changeText(this.id, this.prevText);
+        this.design.changeText(this.id, this.prevText);
     }
 }
 
-// --- Command Manager ---
-class CommandManager {
+// --- Design (formerly Editor with integrated CommandManager) ---
+class Design {
+    private elements: Map<string, DesignElement> = new Map();
     private undoStack: Command[] = [];
     private redoStack: Command[] = [];
 
-    executeCommand(cmd: Command) {
+    execute(cmd: Command) {
         cmd.execute();
         this.undoStack.push(cmd);
+        /**
+         * The most important gotcha here is the line this.redoStack = []; 
+         * this completely clears the redo stack whenever a new command is executed. 
+         * This behavior is standard in most applications: when you perform a new action after undoing something, you lose the ability to redo those previously undone actions. 
+         * For example, if you type "Hello", undo it, then type "World", you can't redo the "Hello" anymore.
+         */
         this.redoStack = [];
     }
 
@@ -185,24 +210,6 @@ class CommandManager {
             cmd.execute();
             this.undoStack.push(cmd);
         }
-    }
-}
-
-// --- Editor ---
-class Editor {
-    private elements: Map<string, DesignElement> = new Map();
-    private commandManager: CommandManager = new CommandManager();
-
-    execute(cmd: Command) {
-        this.commandManager.executeCommand(cmd);
-    }
-
-    undo() {
-        this.commandManager.undo();
-    }
-
-    redo() {
-        this.commandManager.redo();
     }
 
     addElement(el: DesignElement) {
@@ -255,24 +262,66 @@ class Editor {
     }
 }
 
+// --- Workspace ---
+class Workspace {
+    public designs: Design[] = [];
+
+    addDesign(design: Design): void {
+        this.designs.push(design);
+    }
+
+    removeDesign(index: number): void {
+        if (index >= 0 && index < this.designs.length) {
+            this.designs.splice(index, 1);
+        }
+    }
+
+    getDesign(index: number): Design | undefined {
+        return this.designs[index];
+    }
+
+    printAllDesigns(): void {
+        console.log('=== Workspace Designs ===');
+        this.designs.forEach((design, index) => {
+            console.log(`--- Design ${index} ---`);
+            design.printState();
+        });
+    }
+}
+
 // --- Example Usage ---
-const editor = new Editor();
+const workspace = new Workspace();
 
+// Create first design
+const design1 = new Design();
 const txt = new TextBox("txt1", 0, 0, "red", "Hello");
-editor.execute(new InsertCommand(editor, txt));
-editor.execute(new MoveCommand(editor, "txt1", 100, 200));
+design1.execute(new InsertCommand(design1, txt));
+design1.execute(new MoveCommand(design1, "txt1", 100, 200));
 
-editor.undo();
-editor.redo();
-editor.execute(new DeleteCommand(editor, "txt1"));
-editor.undo();
-editor.redo();
-editor.undo();
-editor.execute(new InsertCommand(editor, new Rectangle("rect1", 10, 10, "blue")));
-editor.undo();
-editor.undo();
-editor.execute(new InsertCommand(editor, new Rectangle("rect2", 20, 20, "green")));
-editor.execute(new MoveCommand(editor, "rect2", 200, 300));
-editor.undo();
+// Create second design
+const design2 = new Design();
+const rect = new Rectangle("rect1", 50, 50, "blue");
+design2.execute(new InsertCommand(design2, rect));
 
-editor.printState();
+// Add designs to workspace
+workspace.addDesign(design1);
+workspace.addDesign(design2);
+
+// Perform operations on first design
+design1.undo();
+design1.redo();
+design1.execute(new DeleteCommand(design1, "txt1"));
+design1.undo();
+design1.redo();
+design1.undo();
+design1.execute(new InsertCommand(design1, new Rectangle("rect2", 10, 10, "green")));
+design1.undo();
+design1.undo();
+design1.execute(new InsertCommand(design1, new Rectangle("rect3", 20, 20, "yellow")));
+design1.execute(new MoveCommand(design1, "rect3", 200, 300));
+design1.undo();
+
+// Print all designs in workspace
+workspace.printAllDesigns();
+
+})();
