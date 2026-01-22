@@ -1,9 +1,3 @@
-Perfect follow-up. This topic is **gold** for Software Architect interviews because it shows you think beyond syntax and into **system evolution and team scale**.
-
-I’ll explain this **purely from an architecture standpoint** — not “how TypeScript works”, but **why it matters for long-living systems**.
-
----
-
 # TypeScript for Architecture
 
 _(Interfaces, Generics, Contracts, Type Safety for Evolution)_

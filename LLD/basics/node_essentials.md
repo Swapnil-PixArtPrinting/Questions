@@ -1,7 +1,3 @@
-Got it — I’ll cover this **from a Software Architect lens**, not a beginner Node.js tutorial. Think _system behavior, trade-offs, failure modes, and scaling implications_.
-
----
-
 # Node.js Runtime Basics (Architectural View)
 
 ## 1. What Node.js _really_ is (Architect’s mental model)

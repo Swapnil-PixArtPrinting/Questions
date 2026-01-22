@@ -1,9 +1,3 @@
-Excellent topic — this is **pure Software Architect territory**. This is where many “Node devs” fail and **architects stand out**.
-
-I’ll cover this from a **decision-making and system design** angle, not just API usage.
-
----
-
 # Advanced Node.js
 
 ## Worker Threads vs Child Processes for CPU-Bound Tasks
